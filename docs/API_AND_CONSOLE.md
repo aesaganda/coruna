@@ -101,6 +101,18 @@ The Web Server delivers the exploit stages, loaders, and payloads.
 | `/coruna/payloads/bootstrap.dylib` | `GET` | Primary Mach-O dylib payload injected into WebContent. | `application/octet-stream` |
 | `/coruna/payloads/<hash>/*` | `GET` | Hash-specific sub-payloads and binaries. | `application/octet-stream` |
 | `/static/*` | `GET` | Static assets from `web_server/static/`. | Inferred from file extension |
+| `/ui` (also `/dashboard`, `/admin`) | `GET` | Interactive Operator Web Dashboard UI. | `text/html; charset=utf-8` |
+| `/api/ws` | `GET` (WS) | Live bidirectional WebSocket for C2 shell streaming & HTTP telemetry. | WebSocket (`application/json`) |
+| `/api/status` | `GET` | Server health, uptime, bind addresses, and counters. | `application/json` |
+| `/api/sessions` | `GET` | Active and historical C2 sessions list. | `application/json` |
+| `/api/sessions/{id}` | `GET` / `DELETE` | Fetch session transcript or terminate an active session. | `application/json` |
+| `/api/sessions/{id}/command` | `POST` | Dispatch a shell command to session `{id}`. | `application/json` |
+| `/api/sessions/broadcast` | `POST` | Broadcast a shell command across all active sessions. | `application/json` |
+| `/api/sessions/test` | `POST` | Spawn a local loopback C2 test session for UI verification. | `application/json` |
+| `/api/logs` | `GET` / `DELETE` | Fetch or clear HTTP & C2 telemetry event logs. | `application/json` |
+| `/api/payloads` | `GET` | List exploit stages, sizes, and `manifest.json` bundles. | `application/json` |
+| `/api/payloads/source` | `GET` | Inspect source of an exploit stage file (`?file=<name>`). | `application/json` |
+| `/api/config` | `GET` / `POST` | View or update `config.json` settings. | `application/json` |
 
 ---
 

