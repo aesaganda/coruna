@@ -137,10 +137,10 @@ docker run -it --rm \
 
 You will see:
 ```text
-[*] Web Server de Exploit ouvindo em http://0.0.0.0:80...
-[*] Coruna rodando. Acesse http://IP_DA_VPS/ no iPhone (Safari)
-[*] Comandos: list | use <id> | help | quit
-[*] C2 ouvindo em 0.0.0.0:8080
+[*] Exploit Web Server listening on http://0.0.0.0:80...
+[*] Coruna running. Open http://<SERVER_IP>/ in Safari on your iPhone
+[*] Commands: list | use <id> | help | quit
+[*] C2 listening on 0.0.0.0:8080
 
 (coruna)> 
 ```
@@ -150,8 +150,8 @@ You will see:
 When running with `docker compose up -d` or `docker run -d`, Coruna automatically detects that standard input is not a TTY and transitions into daemon mode without crashing:
 
 ```text
-[*] Modo daemon/não-interativo ativo. Web server e C2 aguardando conexões...
-[*] Pressione Ctrl+C ou envie SIGTERM para parar.
+[*] Daemon / non-interactive mode active. Web server and C2 waiting for connections...
+[*] Press Ctrl+C or send SIGTERM to stop.
 ```
 
 To explicitly force daemon mode even in interactive environments, set:

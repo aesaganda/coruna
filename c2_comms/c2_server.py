@@ -15,7 +15,7 @@ class C2Server:
         peername = writer.get_extra_info("peername") or ("unknown", 0)
         session = Session(reader, writer, peername, session_type="full_access_shell")
         self.active_sessions[session.id] = session
-        print(f"[*] Nova sessão {session.id} — {session.ip_address}:{session.port}")
+        print(f"[*] New session {session.id} — {session.ip_address}:{session.port}")
 
         try:
             while True:
@@ -27,32 +27,32 @@ class C2Server:
         except (ConnectionResetError, BrokenPipeError, asyncio.CancelledError):
             pass
         except Exception as e:
-            print(f"[-] Erro na sessão {session.id}: {e}")
+            print(f"[-] Error in session {session.id}: {e}")
         finally:
-            print(f"[*] Sessão {session.id} de {session.ip_address} encerrada.")
-            # Remover a sessão quando ela terminar
+            print(f"[*] Session {session.id} from {session.ip_address} closed.")
+            # Remove the session when it terminates
             if session.id in self.active_sessions:
                 del self.active_sessions[session.id]
             writer.close()
             await writer.wait_closed()
 
     def get_sessions_summary(self) -> List[dict]:
-        """Retorna um resumo das sessões ativas para exibição."""
+        """Returns a summary of active sessions for display."""
         return [session.to_dict() for session in self.active_sessions.values()]
 
     def get_session_by_id(self, session_id: str) -> Optional[Session]:
-        """Retorna uma instância de Session pelo ID."""
+        """Returns a Session instance by ID."""
         return self.active_sessions.get(session_id)
         
     async def start(self):
         self.server = await asyncio.start_server(
             self._handle_client_connection, self.bind_host, self.port
         )
-        print(f"[*] C2 ouvindo em {self.bind_host}:{self.port}")
+        print(f"[*] C2 listening on {self.bind_host}:{self.port}")
         async with self.server:
             await self.server.serve_forever()
 
     def stop(self):
         if self.server:
             self.server.close()
-            # print("[*] C2 Server desligado.")
+            # print("[*] C2 Server stopped.")

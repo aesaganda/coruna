@@ -35,7 +35,7 @@ sequenceDiagram
     Note over Target: Inject & execute bootstrap.dylib in WebContent
 
     Target->>C2: Inbound TCP Socket Connection (:8080)
-    C2->>Operator: [*] Nova sessão [session_id] — IP:port
+    C2->>Operator: [*] New session [session_id] — IP:port
     Operator->>C2: use <session_id> -> id, uname -a
     C2->>Target: Transmit command over TCP
     Target-->>C2: Return shell stdout/stderr

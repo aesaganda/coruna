@@ -21,7 +21,7 @@ class ConfigManager:
                 with open(self.config_path, "r", encoding="utf-8") as f:
                     return json.load(f)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Config inválido em '{self.config_path}': {e}") from e
+                raise ValueError(f"Invalid config in '{self.config_path}': {e}") from e
         else:
             default_config = {
                 "c2_bind": "0.0.0.0",
@@ -32,7 +32,7 @@ class ConfigManager:
                 "static_files_dir": "web_server/static/",
             }
             try:
-                print(f"[*] Criando arquivo de configuração padrão em '{self.config_path}'.")
+                print(f"[*] Creating default configuration file at '{self.config_path}'.")
                 with open(self.config_path, "w", encoding="utf-8") as f:
                     json.dump(default_config, f, indent=4)
             except OSError:

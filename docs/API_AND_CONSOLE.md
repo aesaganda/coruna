@@ -70,7 +70,7 @@ Attaching to a session using `use <session_id>` switches the prompt to the inter
 ```text
 (coruna)> use 4f8b1a92
 
-[*] Conectado a 192.168.1.45 (sessão 4f8b1a92). Digite 'exit' ou 'back' para voltar.
+[*] Connected to 192.168.1.45 (session 4f8b1a92). Type 'exit' or 'back' to return.
 
 (shell)> id
 uid=501(mobile) gid=501(mobile) groups=501(mobile)
